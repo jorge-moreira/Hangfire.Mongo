@@ -22,7 +22,7 @@ namespace Hangfire.Mongo.Migration.Steps.Version24
                 "_t", new BsonArray { "BaseJobDto", "ExpiringJobDto", "JobDto" });
             using var jobs = jobGraphCollection
                 .Find(jobDtoFilter, new FindOptions { BatchSize = 100 })
-                .Project(Builders<BsonDocument>.Projection.Include("_id"))
+                .Project(Builders<BsonDocument>.Projection.Include("_id").Include("StateHistory"))
                 .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
                 .ToCursor();
             while (jobs.MoveNext())
@@ -30,16 +30,8 @@ namespace Hangfire.Mongo.Migration.Steps.Version24
                 foreach (var job in jobs.Current)
                 {
                     var jobFilter = new BsonDocument("_id", job["_id"]);
-                    var jobDoc = jobGraphCollection.Find(jobFilter)
-                        .Project(Builders<BsonDocument>.Projection.Include("StateHistory"))
-                        .FirstOrDefault();
-                    if (jobDoc == null)
-                    {
-                        continue;
-                    }
-
                     var stateHistory = new BsonArray();
-                    if (jobDoc.TryGetValue("StateHistory", out var existingHistory) && existingHistory.IsBsonArray)
+                    if (job.TryGetValue("StateHistory", out var existingHistory) && existingHistory.IsBsonArray)
                     {
                         stateHistory = existingHistory.AsBsonArray;
                     }
