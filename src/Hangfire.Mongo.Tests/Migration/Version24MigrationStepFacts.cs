@@ -453,6 +453,7 @@ namespace Hangfire.Mongo.Tests.Migration
         [Fact]
         public void ExecuteStep01_MigrateStateHistoryBack_OnlyUpdatesJobDto()
         {
+            // ARRANGE
             var migration = new MigrateStateHistoryBackToJobDtoStep();
             var jobs = _database.GetCollection<BsonDocument>(_storageOptions.Prefix + ".jobGraph");
             var histories = _database.GetCollection<BsonDocument>(_storageOptions.Prefix + ".stateHistory");
@@ -477,8 +478,11 @@ namespace Hangfire.Mongo.Tests.Migration
                 new BsonDocument { ["JobId"] = otherId, ["State"] = new BsonDocument("Name", "Unrelated") }
             });
 
-            Assert.True(migration.Execute(_database, _storageOptions, new MongoMigrationContext()));
+            // ACT
+            var result = migration.Execute(_database, _storageOptions, new MongoMigrationContext());
 
+            // ASSERT
+            Assert.True(result);
             var job = jobs.Find(new BsonDocument("_id", jobId)).Single();
             Assert.Equal("Valid", Assert.Single(job["StateHistory"].AsBsonArray)["Name"].AsString);
             Assert.Equal(otherDocument, jobs.Find(new BsonDocument("_id", otherId)).Single());
@@ -487,6 +491,7 @@ namespace Hangfire.Mongo.Tests.Migration
         [Fact]
         public void ExecuteStep01_MigrateStateHistoryBack_AcrossCursorBatches()
         {
+            // ARRANGE
             var migration = new MigrateStateHistoryBackToJobDtoStep();
             var jobs = _database.GetCollection<BsonDocument>(_storageOptions.Prefix + ".jobGraph");
             var histories = _database.GetCollection<BsonDocument>(_storageOptions.Prefix + ".stateHistory");
@@ -512,8 +517,11 @@ namespace Hangfire.Mongo.Tests.Migration
                 }));
             }
 
-            Assert.True(migration.Execute(_database, _storageOptions, new MongoMigrationContext()));
+            // ACT
+            var result = migration.Execute(_database, _storageOptions, new MongoMigrationContext());
 
+            // ASSERT
+            Assert.True(result);
             var expectedNames = new[] { "Existing" }.Concat(Enumerable.Range(0, 105).Select(i => $"State{i}"));
             foreach (var job in jobs.Find(new BsonDocument()).ToEnumerable())
             {
@@ -526,6 +534,7 @@ namespace Hangfire.Mongo.Tests.Migration
         [Fact]
         public void ExecuteStep01_MigrateStateHistoryBack_SkipsInvalidStatesAndMissingJobs()
         {
+            // ARRANGE
             var migration = new MigrateStateHistoryBackToJobDtoStep();
             var jobs = _database.GetCollection<BsonDocument>(_storageOptions.Prefix + ".jobGraph");
             var histories = _database.GetCollection<BsonDocument>(_storageOptions.Prefix + ".stateHistory");
@@ -558,8 +567,11 @@ namespace Hangfire.Mongo.Tests.Migration
                 new BsonDocument { ["JobId"] = unchangedJobId, ["State"] = BsonNull.Value }
             });
 
-            Assert.True(migration.Execute(_database, _storageOptions, new MongoMigrationContext()));
+            // ACT
+            var result = migration.Execute(_database, _storageOptions, new MongoMigrationContext());
 
+            // ASSERT
+            Assert.True(result);
             var job = jobs.Find(new BsonDocument("_id", jobId)).Single();
             Assert.Equal("Valid", Assert.Single(job["StateHistory"].AsBsonArray)["Name"].AsString);
             Assert.False(jobs.Find(new BsonDocument("_id", unchangedJobId)).Single().Contains("StateHistory"));
